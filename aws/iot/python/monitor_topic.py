@@ -47,7 +47,7 @@ def parse_args():
     )
     parser.add_argument(
         '--topicspath', choices=[x.name for x in io.LogLevel],
-        default="../../../topics.csv", help='path to topics file'
+        default="topics.csv", help='path to topics file'
     )
     return parser.parse_args()
 
@@ -83,6 +83,9 @@ def on_resubscribe_complete(resubscribe_future):
 def on_message_received(topic, payload, dup, qos, retain, **kwargs):
     print("Received message from topic '{}': {}".format(topic, payload))
 
+# does the topic csv file exist at the path specified?
+# yes - will tell the user the file exists
+# no - will create the file at the path
 def flex(path):
     file_exists = os.path.exists(path)
     if file_exists == True:
@@ -93,18 +96,24 @@ def flex(path):
         f.close()
         print(f"creating topics file at {path}")
 
+# reads the topic file and print the topics/description
 def read(path):
     with open(path, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
             print(row)
 
+# checks for similar topics that the user entered
+# useful to prevent overstepping/typos
 def diff(list, topic):
     difflist = difflib.get_close_matches(topic,list,cutoff=0.4)
     print(f"did you mean one of these topics? {difflist}")
     print("if no suitable topic listed use:")
     print("'--topic=#list#' to list all topics created")
 
+# checks that the topic requested exists in the file
+# yes - will tell the user that the topic has been found
+# no - will suggest similar topics via diff()
 def chck(path,topic):
     with open(path, 'r') as file:
         reader = csv.reader(file)
@@ -117,6 +126,9 @@ def chck(path,topic):
             print(f"couldnt find topic {topic}")
             diff(topiclist,topic)
             sys.exit()
+
+# unlike monitor_temp.py, the monitor_topic SHOULD NOT be creating topics
+# this is the responsibility for the sensor device
 
 def main():
     args = parse_args()
@@ -148,11 +160,18 @@ def main():
     connect_future.result()
     print("Connected!")
 
+    # topic checking process - this occurs once connected, but before ANY subscribing
+    # topic_default_path = "topics.csv"
+
     # Subscribe
     if args.topic == "#":
+        # special use case! - in MQTT a '#' is a wildcard for ALL
         print("Subscribing to all topics")
     else:
+        # check to ensure file exists
         flex(args.topicspath)
+        # special use case! - if the user specifies the topic '#list#' then
+        # the topics will be listed
         if args.topic == "#list#":
             read(args.topicspath)
             sys.exit()
