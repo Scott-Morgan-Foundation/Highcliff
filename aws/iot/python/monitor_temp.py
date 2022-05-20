@@ -64,7 +64,7 @@ def parse_args():
     )
     parser.add_argument(
         '--topicspath', choices=[x.name for x in io.LogLevel],
-        default="../../../topics.csv", help='path to topics file'
+        default="topics.csv", help='path to topics file'
     )
     return parser.parse_args()
 
@@ -116,7 +116,10 @@ def _checkTemp(file_name: str, historic_temp: float):
                 return True, new_temp, sample_time
             else:
                 return False, historic_temp, sample_time
-    
+
+# does the topic csv file exist at the path specified?
+# yes - will tell the user the file exists
+# no - will create the file at the path
 def flex(path):
     file_exists = os.path.exists(path)
     if file_exists == True:
@@ -127,12 +130,15 @@ def flex(path):
         f.close()
         print(f"creating topics file at {path}")
 
+# reads the topic file and print the topics/description
 def read(path):
     with open(path, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
             print(row)
 
+# checks for similar topics that the user entered
+# useful to prevent overstepping/typos
 def diff(list, topic):
     difflist = difflib.get_close_matches(topic,list,cutoff=0.4)
     print(f"did you mean one of these topics? {difflist}")
@@ -140,6 +146,9 @@ def diff(list, topic):
     print("'--topic=create:path,topic,desc' to create one")
     print("NO SPACES MUST BE USED - please use underscores")
 
+# checks that the topic requested exists in the file
+# yes - will tell the user that the topic has been found
+# no - will suggest similar topics via diff()
 def chck(path,topic):
     with open(path, 'r') as file:
         reader = csv.reader(file)
@@ -153,6 +162,7 @@ def chck(path,topic):
             diff(topiclist,topic)
             sys.exit()
 
+# creates a topic with the specified topic/desc in the csv file
 def crte(path,topic,desc):
     f = open(path, "a+")
     f.write("\n"+topic+","+desc)
@@ -195,9 +205,12 @@ if __name__ == '__main__':
     connect_future.result()
     print("Connected!")
 
-    # topic_default_path = "../../../topics.csv"
+    # topic checking process - this occurs once connected, but before ANY subscribing
+    # topic_default_path = "topics.csv"
     flex(args.topicspath)
 
+    # special use case!
+    # if the topic check included "create:" then the topic will be created
     if "create:" in args.topic:
         paras2 = args.topic.split(":")
         paras3 = paras2[1].split(",")
